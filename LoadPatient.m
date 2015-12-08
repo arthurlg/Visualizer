@@ -12,7 +12,8 @@ function dataWholeRecord = LoadPatient(filename, create_dat)
     filename = filename(1:end-4);
 
     if (create_dat)
-        commandStr = ['/Users/alexandrel/Documents/Projects/Arthur/script.py ' filename];
+        current_path = pwd;
+        commandStr = [current_path '/script.py ' filename];
         [status, commandOut] = system(commandStr);
         if status~=0
             fprintf('Echec du script python !\n');
@@ -127,7 +128,7 @@ function dataWholeRecord = LoadPatient(filename, create_dat)
     end
             
     
-    s_comp = splitString(header,CONST.columnDivider);
+    s_comp = strsplit(header,CONST.columnDivider);
     
     % Load data from the .dat file that has been created with the script.
     data = load([filename '.dat']);
