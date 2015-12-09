@@ -1,0 +1,164 @@
+% This version include customers to export selected Data, depending on the objectives of the selection.
+% This choice has to appear as a popup, after pushing the Export Button and entering the new filename.
+
+
+
+
+% --- Executes on button press in Exportbutton.
+function Exportbutton_Callback(hObject, eventdata, handles)
+VariableNames = handles.VariableNames;
+ExportData = struct;
+axes(handles.axes1);
+hold on;
+XLim = xlim;
+FoundECG = 0;
+InitCyclePoints =[];
+SaveData = [];
+for i = 1 : length(VariableNames)
+    
+    VariableName = VariableNames{i};
+    if get(handles.(['radiobutton',num2str(i)]),'Value')
+        ThisData = handles.Data.(VariableNames{i});
+        ThisTime = get(handles.Plots.(VariableName),'XData');
+        ThisTime = ThisTime';
+        ThisData = ThisData(:,2);
+        
+        ThisData = ThisData(ThisTime>=XLim(1));
+        ThisTime = ThisTime(ThisTime>=XLim(1));
+        ThisData = ThisData(ThisTime<=XLim(2));
+        ThisTime = ThisTime(ThisTime<=XLim(2));
+        ThisData = ThisData+handles.Translations.(VariableName);
+        ThisData = ThisData.*handles.Factors.(VariableName);
+        ExportData.(VariableName) = [ThisTime,ThisData];
+        %SaveData = [SaveData ExportData.(VariableName)];
+    end
+end
+
+if isfield(handles,'MinPlots')
+    AdjustNum = handles.Adjustpopup.Value;
+    Variable = VariableNames{AdjustNum};
+    if isfield(handles.MinPlots,Variable)
+        InitCyclePoints = get(handles.MinPlots.(Variable),'XData');
+    end
+end
+
+PathName = handles.PathName;
+FileName = handles.FileName;
+
+prompt = {'Enter file name:'};
+dlg_title = 'Save as';
+num_lines = 1;
+defaultans = {[FileName(1:end-4),'_SelectedCycles']};
+NewFileName = inputdlg(prompt,dlg_title,num_lines,defaultans);
+%writetable(ExportData,[defaultans,'.mat'],'Delimiter',';','FileType','.csv')
+
+if ~length(NewFileName)==0
+    NewName = [PathName NewFileName{1}];
+  
+    % Préparer le fichier à exporter en .csv
+    SaveData=[];
+    VariableNames2 = fields(ExportData);
+    for i = 1:length(fields(ExportData))
+        SaveData = [SaveData length(ExportData.(VariableNames2{i}))];
+    end
+    
+    if isfield(ExportData,'ECG_I') | isfield(ExportData,'ECG_II') | isfield(ExportData,'ECG_III') | isfield(ExportData,'ECG_V_sel') | isfield(ExportData,'MCL')
+        IndexLength = 1:length(fields(ExportData));
+        IndexMaxLength = find(max(SaveData)) ;
+
+        DataCSV = [];
+        DataCSV = dataset(ExportData.(VariableNames2{IndexMaxLength})(:,1),ExportData.(VariableNames2{IndexMaxLength})(:,2),'VarNames',{'Time',VariableNames2{IndexMaxLength}});
+        for i = find(IndexLength~=IndexMaxLength)
+            Ds2 = dataset(ExportData.(VariableNames2{i})(:,1),ExportData.(VariableNames2{i})(:,2),'VarNames',{'Time',VariableNames2{i}});
+            DataCSV = join(DataCSV, Ds2,'type','leftouter','MergeKeys',true);
+        end
+        
+        str ={};
+        IsExp = {'.mat' '.csv' '.xlsx'};
+        for ii = 1 : length(IsExp)
+            if regexp(IsExp{ii},'.mat|.csv|.xlsx')
+                str{length(str)+1} = IsExp{ii};
+            end
+        end
+        qstring = 'Export format?';
+        [s,v] = listdlg('PromptString',qstring,...
+                'SelectionMode','single',...
+                'ListString',str);
+        format = str{s};
+        handles.format = format;        
+    else 
+        if isfield(ExportData,'CO2')
+            IndexLength = 1:length(fields(ExportData));
+            IndexMinLength = find(min(SaveData)) ;
+            DataCSV = [];
+            DataCSV = dataset(ExportData.(VariableNames2{IndexMinLength})(:,1),ExportData.(VariableNames2{IndexMinLength})(:,2),'VarNames',{'Time',VariableNames2{IndexMinLength}});
+            for i = find(IndexLength~=IndexMinLength)
+                Ds2 = dataset(ExportData.(VariableNames2{i})(:,1),ExportData.(VariableNames2{i})(:,2),'VarNames',{'Time',VariableNames2{i}});
+                DataCSV = join( Ds2,DataCSV,'type','leftouter','MergeKeys',true);
+            end
+            str ={};
+            IsExp = {'.mat' '.csv' '.xlsx'};
+            for ii = 1 : length(IsExp)
+                if regexp(IsExp{ii},'.mat|.csv|.xlsx')
+                    str{length(str)+1} = IsExp{ii};
+                end
+            end
+            qstring = 'Export format?';
+            [s,v] = listdlg('PromptString',qstring,...
+                    'SelectionMode','single',...
+                    'ListString',str);
+            format = str{s};
+            handles.format = format;
+        else
+            IndexLength = 1:length(fields(ExportData));
+            IndexMaxLength = find(max(SaveData)) ;
+
+            DataCSV = [];
+            DataCSV = dataset(ExportData.(VariableNames2{IndexMaxLength})(:,1),ExportData.(VariableNames2{IndexMaxLength})(:,2),'VarNames',{'Time',VariableNames2{IndexMaxLength}});
+            for i = find(IndexLength~=IndexMaxLength)
+                Ds2 = dataset(ExportData.(VariableNames2{i})(:,1),ExportData.(VariableNames2{i})(:,2),'VarNames',{'Time',VariableNames2{i}});
+                DataCSV = join(DataCSV, Ds2,'type','leftouter','MergeKeys',true);
+            end
+            str ={};
+            IsExp = {'.mat' '.csv' '.xlsx'};
+            for ii = 1 : length(IsExp)
+                if regexp(IsExp{ii},'.mat|.csv|.xlsx')
+                    str{length(str)+1} = IsExp{ii};
+                end
+            end
+            qstring = 'Export format?';
+            [s,v] = listdlg('PromptString',qstring,...
+                    'SelectionMode','single',...
+                    'ListString',str);
+            format = str{s};
+            handles.format = format;
+        end        
+    end
+    
+    if ~isempty(regexp(format,'.xlsx'))
+        export(DataCSV,'XLSfile',[NewName format])
+    else
+        if ~isempty(regexp(format,'.csv'))
+            export(DataCSV,'File',[NewName format],'Delimiter',';');
+        else
+            if ~isempty(regexp(format,'.mat'))
+                save([NewName format],'-struct','ExportData');
+                if ~isempty(InitCyclePoints)
+                    save([NewName,'initCyclePoint','.mat'],'InitCyclePoints');
+                end
+            end
+        end
+    end
+    
+    
+    
+end
+
+
+  % Store the value
+  guidata(hObject,handles);
+
+
+
+
+
